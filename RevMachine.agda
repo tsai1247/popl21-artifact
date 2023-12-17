@@ -11,6 +11,7 @@ record RevMachine {ℓ} : Set (suc ℓ) where
     _↦_ : Rel State ℓ
     deterministic : ∀ {st st₁ st₂} → st ↦ st₁ → st ↦ st₂ → st₁ ≡ st₂
     deterministicᵣₑᵥ : ∀ {st st₁ st₂} → st₁ ↦ st → st₂ ↦ st → st₁ ≡ st₂
+    has-next : ∀ (st : State) → Dec (∃[ st' ] (st ↦ st'))
 
 record PartialRevMachine {ℓ} : Set (suc ℓ) where
   field
