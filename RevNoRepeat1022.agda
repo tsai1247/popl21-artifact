@@ -80,6 +80,12 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   ... | symcd+m with split↦ⁿ {st₀} {stₙ} {m} {cd} (same₁ st₀↦stₙ (trans (+-comm m cd ) cd+m≡n ))
   ... | stₘ , st₀↦stₘstₘ , _ = stₘ , st₀↦stₘstₘ
 
+  Step→Trace-helper : ∀ {m N st₀ st₁ stₘ}
+    → st₀ ↦ st₁
+    → (m ≤ N → st₁ ↦[ m ] stₘ)
+    → (suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
+  Step→Trace-helper st₀↦st₁ m≤N→st₁↦stₘ (s≤s m≤N) = st₀↦st₁ ∷ m≤N→st₁↦stₘ m≤N
+
   Step→Trace : ∀ {N st₀}
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
     → (m : ℕ) → ∃[ stₘ ] (m ≤ N → st₀ ↦[ m ] stₘ)
@@ -87,7 +93,7 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   Step→Trace {0} {st₀} (stₙ , st₀↦ᴺstₙ) (suc m) = stₙ , λ ()
   Step→Trace {suc N} {st₀} (stₙ , st₀↦ᴺstₙ) zero = st₀ , λ _ → ◾
   Step→Trace {suc N} {st₀} (stₙ , (st₀↦st₁ ∷ st₁↦ᴺstₙ)) (suc m) with Step→Trace (stₙ , st₁↦ᴺstₙ) m
-  ... | stₘ , snd = {!!}
+  ... | stₘ , snd = stₘ , Step→Trace-helper st₀↦st₁ snd 
   --              ∃-syntax (λ stₘ → suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
 
   Step→State : ∀ {N st₀}
@@ -331,23 +337,29 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   cd-1 {m} {cd} eql = trans (+-assoc m 1 cd) eql -- trans (sym (+-suc m cd)) eql 
 
 
-  p1 : ∀ {N st₀ m stₘ}
-    → (cd : ℕ) → m + cd ≡ N
+  p1 : ∀ {N st₀}
     → State ⤖ Fin N
     → is-initial st₀
-    → st₀ ↦[ m ] stₘ
+    → ∀ m cd stₘ → m + cd ≡ N → st₀ ↦[ m ] stₘ
     → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
 
-  p1 {N} {st₀} {m} {stₘ} (suc cd) sum-eql St-Fin st₀-initial st₀↦ᵐstₘ with has-next stₘ
-  ... | .true because ofʸ (stₘ₊₁ , stₘ↦stₘ₊₁) = p1 {N} {st₀} {m + 1} {stₘ₊₁} cd (cd-1 sum-eql) St-Fin st₀-initial
+  p1 {N} {st₀} St-Fin st₀-initial m (suc cd) stₘ sum-eql st₀↦ᵐstₘ with has-next stₘ
+  ... | .true because ofʸ (stₘ₊₁ , stₘ↦stₘ₊₁) = p1 {N} {st₀} St-Fin st₀-initial (m + 1) cd stₘ₊₁ (cd-1 sum-eql)
     (_++↦ⁿ_ {n = m} {m = 1} st₀↦ᵐstₘ (stₘ↦stₘ₊₁ ∷ ◾))
   ... | .false because ofⁿ ¬p = stₘ , sub8 st₀↦ᵐstₘ , ¬p
 
-  p1 {N} {st₀} {m} {stₘ} 0 m+0≡N St-Fin st₀-initial st₀↦ᵐstₘ with sub2 m+0≡N
+  p1 {N} {st₀} St-Fin st₀-initial m 0 stₘ m+0≡N st₀↦ᵐstₘ with sub2 m+0≡N
   ... | m≡N with sub1 {N} {m} {st₀} {stₘ} St-Fin st₀-initial m≡N (same₁ st₀↦ᵐstₘ (sym m≡N))
   ... | ()
 
 -- p2 : 可能是無限或有限的State ，對每個initial state，reachable state是有限的
 
 -- Pi/
+
+  real-p1 : ∀ {N st₀}
+    → State ⤖ Fin N
+    → is-initial st₀
+    → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
+  real-p1 {N} {st₀} St-Fin st₀-initial = p1 {N} {st₀} St-Fin st₀-initial 0 N st₀ refl ◾
+--  aa {N = N} {m = m} = p1 {N = N} {m = m} {cd = proj₁ (aa-helper m N {!!})} {proj₂ (aa-helper m N {!!})}
 
