@@ -39,31 +39,34 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   from-to record { to = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; bijective = record { injective = injective ; surjective = record { from = from ; right-inverse-of = right-inverse-of } } } st = right-inverse-of st
 
 ----------------------
-  same₁ : ∀ {st₀ m n stₙ}
-    → st₀ ↦[ n ] stₙ
-    → m ≡ n
-    → st₀ ↦[ m ] stₙ
-  same₁ {st₀} {m} {.m} {stₙ} st₀↦stₙ refl = st₀↦stₙ
+  private
+    same-trace : ∀ {st₀ m n stₙ}
+      → st₀ ↦[ n ] stₙ
+      → m ≡ n
+      → st₀ ↦[ m ] stₙ
+    same-trace {st₀} {m} {.m} {stₙ} st₀↦stₙ refl = st₀↦stₙ
 
-  split↦ⁿ : ∀ {st st'' n m} → st ↦[ n + m ] st''
-            → ∃[ st' ] (st ↦[ n ] st' × st' ↦[ m ] st'')
-  split↦ⁿ {n = 0} {m} rs = _ , ◾ , rs
-  split↦ⁿ {n = suc n} {m} (r ∷ rs) with split↦ⁿ {n = n} {m} rs
-  ... | st' , st↦ⁿst' , st'↦ᵐst'' = st' , (r ∷ st↦ⁿst') , st'↦ᵐst''
+    split↦ⁿ : ∀ {st st'' n m} → st ↦[ n + m ] st''
+      → ∃[ st' ] (st ↦[ n ] st' × st' ↦[ m ] st'')
+    split↦ⁿ {n = 0} {m} rs = _ , ◾ , rs
+    split↦ⁿ {n = suc n} {m} (r ∷ rs) with split↦ⁿ {n = n} {m} rs
+    ... | st' , st↦ⁿst' , st'↦ᵐst'' = st' , (r ∷ st↦ⁿst') , st'↦ᵐst''
 
   SubTrace : ∀ st₀ m n
     → ∃[ stₙ ] (st₀ ↦[ n ] stₙ)
     → ∃[ cd ] ( cd + m ≡ n)
     → ∃[ stₘ ] (st₀ ↦[ m ] stₘ)
   SubTrace st₀ m n (stₙ , st₀↦stₙ) (cd , cd+m≡n) with sym cd+m≡n
-  ... | symcd+m with split↦ⁿ {st₀} {stₙ} {m} {cd} (same₁ st₀↦stₙ (trans (+-comm m cd ) cd+m≡n ))
+  ... | symcd+m with (same-trace st₀↦stₙ (trans (+-comm m cd ) cd+m≡n ))
+  ... | st₀↦[cd+m]stₙ with split↦ⁿ {st₀} {stₙ} {m} {cd} st₀↦[cd+m]stₙ
   ... | stₘ , st₀↦stₘstₘ , _ = stₘ , st₀↦stₘstₘ
 
-  Step→Trace-helper : ∀ {m N st₀ st₁ stₘ}
-    → st₀ ↦ st₁
-    → (m ≤ N → st₁ ↦[ m ] stₘ)
-    → (suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
-  Step→Trace-helper st₀↦st₁ m≤N→st₁↦stₘ (s≤s m≤N) = st₀↦st₁ ∷ m≤N→st₁↦stₘ m≤N
+  private
+    Step→Trace-helper : ∀ {m N st₀ st₁ stₘ}
+      → st₀ ↦ st₁
+      → (m ≤ N → st₁ ↦[ m ] stₘ)
+      → (suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
+    Step→Trace-helper st₀↦st₁ m≤N→st₁↦stₘ (s≤s m≤N) = st₀↦st₁ ∷ m≤N→st₁↦stₘ m≤N
 
   Step→Trace : ∀ {N st₀}
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
@@ -88,7 +91,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
     → (m : ℕ) → Fin N
   Step→Fin {N} {st₀} St-Fin (stₙ , st₀↦ⁿstₙ) m = to St-Fin (proj₁ (Step→Trace {N} {st₀} (stₙ , st₀↦ⁿstₙ) m))
   
-
   Step→ℕ : ∀ {N st₀}
     → State ⤖ Fin N
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
@@ -124,12 +126,7 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
     → m < n → ¬ m ≡ n 
   <→≢ {suc m} .{suc _} (s≤s _m<n) refl = <-irreflexive m _m<n
 
-  from-toℕ : ∀ N m → (m<N : m < N)
-    → toℕ (fromℕ< {m} {N} m<N) ≡ m
-  from-toℕ (suc N) zero m<N = refl
-  from-toℕ (suc N) (suc m) m<N = cong suc (from-toℕ N m (≤-pred m<N))
-
-  to-fromℕ : ∀ N (fn : Fin N) -- → (m<N : m < N
+  to-fromℕ : ∀ N (fn : Fin N)
     → fromℕ< {toℕ fn} (FinN<N fn) ≡ fn
   to-fromℕ (suc N) Fin.zero = refl
   to-fromℕ (suc N) (Fin.suc fn) = cong Fin.suc (to-fromℕ N fn)
@@ -156,27 +153,25 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   ... | b≡stₙ with cong (from St-Fin) eql
   ... | a≡b = trans (trans (sym a≡stₘ) a≡b) b≡stₙ
 
-  -- fromℕ< : ∀ {m n} → m ℕ.< n → Fin n
   from-reverse : ∀ stₘ stₙ N
     → (St-Fin : State ⤖ Fin N)
     → toℕ (to St-Fin stₘ) ≡ toℕ (to St-Fin stₙ)
     → stₘ ≡ stₙ
   from-reverse stₘ stₙ N St-Fin eql with toℕ→Fin eql
   ... | to-stₘ≡to-stₙ = to-eql St-Fin to-stₘ≡to-stₙ
-
-  sub1 : ∀ {N m st₀ stₙ}
+  
+  stₙ→⊥ : ∀ {N st₀ stₙ}
     → State ⤖ Fin N
     → is-initial st₀
-    → m ≡ N
     → st₀ ↦[ N ] stₙ → ⊥
 
-  sub1 {N} {m} {st₀} {stₙ} St-Fin st₀-initial m≡N st₀↦ⁿ↦stₙ with sub1-1 {N} {st₀} St-Fin (st₀↦ⁿ↦stₙ) 
+  stₙ→⊥ {N} {st₀} {stₙ} St-Fin st₀-initial st₀↦ⁿ↦stₙ with sub1-1 {N} {st₀} St-Fin (st₀↦ⁿ↦stₙ) 
   ... | line2 with pigeonhole (N) (Step→ℕ St-Fin (stₙ , st₀↦ⁿ↦stₙ))  line2 
   ... | m₁ , n₁ , m₁<n₁ , n₁≤N , tofn₁≡tofm₁ with ≤-trans (<→≤ m₁<n₁) n₁≤N
   ... | m₁≤N with Step→Trace {N} {st₀} (stₙ , st₀↦ⁿ↦stₙ ) m₁
   ... | stₘ₁ , trₘ  with Step→Trace {N} {st₀} (stₙ , st₀↦ⁿ↦stₙ) n₁
   ... | stₙ₁ , trₙ with NoRepeat {st₀} {stₘ₁} {stₙ₁} {m₁} {n₁} st₀-initial m₁<n₁ (trₘ m₁≤N) (trₙ n₁≤N)
-  ... | a = a (sym (from-reverse stₙ₁ stₘ₁ N St-Fin  tofn₁≡tofm₁ ) )
+  ... | a = a (sym (from-reverse stₙ₁ stₘ₁ N St-Fin  tofn₁≡tofm₁ ) ) 
 
   sub2 : ∀ {m n}
     → m + 0 ≡ n
@@ -207,7 +202,7 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   ... | .false because ofⁿ ¬p = stₘ , sub8 st₀↦ᵐstₘ , ¬p
 
   p1 {N} {st₀} St-Fin st₀-initial m 0 stₘ m+0≡N st₀↦ᵐstₘ with sub2 m+0≡N
-  ... | m≡N with sub1 {N} {m} {st₀} {stₘ} St-Fin st₀-initial m≡N (same₁ st₀↦ᵐstₘ (sym m≡N))
+  ... | m≡N with stₙ→⊥ {N} {st₀} {stₘ} St-Fin st₀-initial (same-trace st₀↦ᵐstₘ (sym m≡N))
   ... | ()
 
   real-p1 : ∀ {N st₀}
