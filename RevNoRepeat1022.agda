@@ -9,32 +9,14 @@ open import Data.Nat.Properties using ( +-suc ; +-comm ; +-assoc ; <-trans ; ≤
 open import RevMachine
 
 open import Function.Bijection using ( _⤖_ ; Bijection )
--- open import Function.Bijection.Bijection using ( to )
 open import Data.Fin using ( Fin ; toℕ ; fromℕ<)
 open import Relation.Nullary
 
 open import Pigeonhole
 
-
 module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   open RevMachine.RevMachine M
   open import RevNoRepeat M
-
---    st₀    ↦    st₁    ↦    st₂    ↦    st₃    ↦    stₙ₋₁      ↦      stₙ
---    0           1           2           3           n-1               n (≡N) ∀ n → n ≤ N
---    st₀↦[0]st₀  st₀↦[1]st₁  st₀↦[2]st₂  st₀↦[3]st₃  st₀↦[n-1]stₙ₋₁    st₀↦[n]stₙ
---    FinN        FinN        FinN        FinN        FinN              FinN
---    toℕ(FinN)     toℕ(FinN)     toℕ(FinN)     toℕ(FinN)     toℕ(FinN)           toℕ(FinN)
-
---    f( n ) => st₀ ↦[n] stₙ 得到 stₙ ， 經過  State ⤖ Fin N 轉換 stₙ 為 FinN ，toℕ FinN 轉換成結果
-
-  -- 頭尾定義
-  
-  is-not-stuck : State → Set _
-  is-not-stuck st = ∃[ st' ] (st ↦ st')
-
-  
-----------------------
 
 ----------------------
   -- 把 State ⤖ Fin N 中的 to 跟 from 拉出來用
@@ -62,9 +44,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
     → m ≡ n
     → st₀ ↦[ m ] stₙ
   same₁ {st₀} {m} {.m} {stₙ} st₀↦stₙ refl = st₀↦stₙ
-
--- with cong (λ x → (st₀ ↦[ x ] stₙ)) m≡n
---   ... | a = {!!}
 
   split↦ⁿ : ∀ {st st'' n m} → st ↦[ n + m ] st''
             → ∃[ st' ] (st ↦[ n ] st' × st' ↦[ m ] st'')
@@ -94,7 +73,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   Step→Trace {suc N} {st₀} (stₙ , st₀↦ᴺstₙ) zero = st₀ , λ _ → ◾
   Step→Trace {suc N} {st₀} (stₙ , (st₀↦st₁ ∷ st₁↦ᴺstₙ)) (suc m) with Step→Trace (stₙ , st₁↦ᴺstₙ) m
   ... | stₘ , snd = stₘ , Step→Trace-helper st₀↦st₁ snd 
-  --              ∃-syntax (λ stₘ → suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
 
   Step→State : ∀ {N st₀}
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
@@ -103,12 +81,7 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   Step→State {.0} {.stₙ} (stₙ , ◾) (suc m) = stₙ
   Step→State {.(suc _)} {st₀} (stₙ , (st₀↦st₁ ∷ st₁↦ⁿstₙ)) zero = st₀
   Step→State {.(suc _)} {st₀} (stₙ , (st₀↦st₁ ∷ st₁↦ⁿstₙ)) (suc m) = Step→State  (stₙ , (st₁↦ⁿstₙ)) (m) 
-{-
-  Step→State {N} {st₀} (stₙ , st₀↦stₙ) m with m ≤? N
-  ... | .false because ofⁿ ¬m≤N = st₀
-  ... | .true because ofʸ m≤N with getCd′ m≤N
-  ... | cd , m+cd≡N = proj₁ ( split↦ⁿ {st₀} {stₙ} {m} {cd} (same₁ st₀↦stₙ m+cd≡N) )
--}
+
   Step→Fin : ∀ {N st₀}
     → State ⤖ Fin N
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
@@ -137,11 +110,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   sub1-1 {N} {st₀} {stₙ} St-Fin st₀↦ᴺstₙ n n≤N with (Step→Fin St-Fin (stₙ , st₀↦ᴺstₙ) n)
   ... | FinN  = FinN<N FinN
 
-{- with n ≤? N
-  ... | .true because ofʸ n≤N = FinN<N FinN -- FinN<N (to St-Fin (proj₁ (SubTrace st₀ n N stₙ st₀↦ᴺstₙ (getCd n≤N))))
-  ... | .false because ofⁿ ¬p = {!!} -- FinN<N (to St-Fin st₀)  
--}
-
   <→≤ : ∀ {m n}
     → m < n → m ≤ n
   <→≤ {zero} {n} m<n = z≤n
@@ -155,97 +123,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   <→≢ : ∀{m n : ℕ}
     → m < n → ¬ m ≡ n 
   <→≢ {suc m} .{suc _} (s≤s _m<n) refl = <-irreflexive m _m<n
-{-
--- n₁ 與 m₁ 都對應到一個 < N 的 State，那麼他們to過去應該要是不同的 Fin N
--- 然後 tofm≡tofn ，所以得到矛盾
-
-  sub1-3-1-1-1 : ∀ {N} {fm : Fin N}
-    → fromℕ< (FinN<N fm) ≡ fm
-  sub1-3-1-1-1 {.(suc _)} {Fin.zero} = refl
-  sub1-3-1-1-1 {.(suc _)} {Fin.suc fm} = cong Fin.suc sub1-3-1-1-1
-
-  sub1-3-1-1 : ∀ {N} {fm fn : Fin N}
-    → toℕ fm ≡ toℕ fn
-    → fm ≡ fn
-  sub1-3-1-1 {.(suc _)} {Fin.zero} {Fin.zero} tofm≡tofn = refl
-  sub1-3-1-1 {.(suc _)} {Fin.suc fm} {Fin.suc fn} tofm≡tofn = {!!}
-
-  sub1-3-1-2 : ∀ {N stₘ stₙ}
-    → (St-Fin : State ⤖ Fin N)
-    → to St-Fin stₘ ≡ to St-Fin stₙ
-    → stₘ ≡ stₙ
-  sub1-3-1-2 {N} {stₘ} {stₙ} St-Fin fm≡fn with to-from St-Fin stₘ
-  ... | stₘ≡stₘ with to-from St-Fin stₙ
-  ... | stₙ≡stₙ with cong (λ x → from St-Fin x) fm≡fn
-  ... | stₘ≡stₙ = trans (trans (sym stₘ≡stₘ) stₘ≡stₙ) stₙ≡stₙ
-    
-  sub1-3-1-3 : ∀ {N m n st₀}
-    → m ≤ N → n ≤ N
-    → (ex : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
-    → Step→State ex m ≡ Step→State ex n
-    → m ≡ n
-  sub1-3-1-3 {N} {m} {n} {st₀} m≤N n≤N ex b≡d = {!!}
-  -}
-{-
-  when m ≤ N → ∃[ cd ] (m+cd≡N)
-
-  Step→State ex m ≡ Step→State ex n
-  → proj₁ ( split↦ⁿ {st₀} {stₙ} {m} {cd₁} (st₀↦stₙ) ≡ proj₁ ( split↦ⁿ {st₀} {stₙ} {n} {cd} (st₀↦stₙ)
-  -- cd 不同？
-  → 
--}
-
-{- with m ≤? N
-  ... | .false because ofⁿ ¬p = {!!}
-  ... | .true because ofʸ p with tmpState {N} {st₀} {m} m≤N ex (SubTrace st₀ m N ex (getCd p))
-  ... | a≡b with n ≤? N
-  ... | .false because ofⁿ ¬p₁ = {!!}
-  ... | .true because ofʸ p with tmpState {N} {st₀} {n} n≤N ex (SubTrace st₀ n N ex (getCd p))
-  ... | c≡d with trans (trans a≡b b≡d) (sym c≡d)
-  ... | a≡c with m ≤? N
-  ... | .false because ofⁿ ¬p₂ = {!!}
-  ... | .true because ofʸ p₂ with n ≤? N 
-  ... | .false because ofⁿ ¬p₃ = {!!}
-  ... | .true because ofʸ p₃ = {!!}
--}
-
-
--- {!tmpState {N} {st₀} {m} m≤N ex ?!}
-{-    
-  sub1-3-1 : ∀ {N m n st₀ stₙ}
-    → (St-Fin : State ⤖ Fin N)
-    → (st₀↦ⁿstₙ : st₀ ↦[ N ] stₙ)
-    → m ≤ N → n ≤ N
-    → Step→ℕ St-Fin (stₙ , st₀↦ⁿstₙ) m ≡ Step→ℕ St-Fin (stₙ , st₀↦ⁿstₙ) n
-    → m ≡ n
-  sub1-3-1 {N} {m} {n} {st₀} {stₙ} St-Fin st₀↦ⁿstₙ m≤N n≤N tofm≡tofn with sub1-3-1-1 tofm≡tofn
-  ... | fm≡fn with sub1-3-1-2 St-Fin fm≡fn
-  ... | stₘ≡stₙ with sub1-3-1-3 m≤N n≤N (stₙ , st₀↦ⁿstₙ) stₘ≡stₙ
-  ... | m≡n = m≡n
--}
-{- with m ≤? N
-  ... | .false because ofⁿ ¬p = {!!}
-  ... | .true because ofʸ m≤N′ with n ≤? N
-  ... | .false because ofⁿ ¬p₁ = {!!}
-  ... | .true because ofʸ n≤N′ = {!!}
--}
-{-
-  sub1-3 : ∀ {m n N st₀ stₙ}
-    → (St-Fin : State ⤖ Fin N)
-    → m < n → n ≤ N
-    → (st₀↦ⁿstₙ : st₀ ↦[ N ] stₙ)
-    → Step→ℕ St-Fin (stₙ , st₀↦ⁿstₙ) m ≢ Step→ℕ St-Fin (stₙ , st₀↦ⁿstₙ) n
-  sub1-3 {m} {n} {N} {st₀} {stₙ} St-Fin m<n n≤N st₀↦ⁿstₙ tofm≡tofn with ≤-trans (<→≤ m<n) n≤N
-  ... | m≤N with sub1-3-1 {N} {m} {n} St-Fin st₀↦ⁿstₙ m≤N n≤N tofm≡tofn
-  ... | a = (<→≢ m<n) a
--}
-
-{- with n ≤? N
-  ... | .false because ofⁿ ¬p = ¬p n≤N
-  ... | .true because ofʸ p with m ≤? N
-  ... | .false because ofⁿ ¬p₁ = ¬p₁ (≤-trans (<→≤ m<n) n≤N)
-  ... | .true because ofʸ p₁ = {!!}
--}
 
   from-toℕ : ∀ N m → (m<N : m < N)
     → toℕ (fromℕ< {m} {N} m<N) ≡ m
@@ -257,12 +134,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   to-fromℕ (suc N) Fin.zero = refl
   to-fromℕ (suc N) (Fin.suc fn) = cong Fin.suc (to-fromℕ N fn)
 
-{-
-  tmp2 : ∀ N (fm fn : Fin N)
-    → toℕ fm ≡ toℕ fn
-    → (FinN<N fm) ≡ (FinN<N fn)
-  tmp2 N fm fn eql = ?
--}
   ss : ∀ {m} {n}
     → suc m ≡ suc n
     → m ≡ n
@@ -307,19 +178,6 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   ... | stₙ₁ , trₙ with NoRepeat {st₀} {stₘ₁} {stₙ₁} {m₁} {n₁} st₀-initial m₁<n₁ (trₘ m₁≤N) (trₙ n₁≤N)
   ... | a = a (sym (from-reverse stₙ₁ stₘ₁ N St-Fin  tofn₁≡tofm₁ ) )
 
--- (sub1-3 St-Fin m₁<n₁ n₁≤N (same₁ st₀↦ⁿ↦stₙ (sym m≡N))) (sym tofn₁≡tofm₁)
-{- with n₁ ≤? N
-
-
-  ... | .false because ofⁿ ¬p = ¬p n₁≤N
-  ... | .true because ofʸ p with m₁ ≤? N
-  ... | .false because ofⁿ ¬p = ¬p (sub1-2 m₁<n₁ n₁≤N)
-  ... | .true because ofʸ p₁ with Step→ℕ St-Fin (stₙ , same₁ st₀↦ⁿ↦stₙ (sym m≡N)) n₁
-  ... | tofn₁ with Step→ℕ St-Fin (stₙ , same₁ st₀↦ⁿ↦stₙ (sym m≡N)) m₁
-  ... | tofm₁ = {!(sub1-3 St-Fin m₁<n₁ n₁≤N (same₁ st₀↦ⁿ↦stₙ (sym m≡N))) tofn₁≡tofm₁ !}
-
--}
-
   sub2 : ∀ {m n}
     → m + 0 ≡ n
     → m ≡ n
@@ -334,7 +192,7 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   cd-1 : ∀ {m} {cd} {N}
     → (m) + (suc cd) ≡ N
     → (m + 1) + (cd) ≡ N
-  cd-1 {m} {cd} eql = trans (+-assoc m 1 cd) eql -- trans (sym (+-suc m cd)) eql 
+  cd-1 {m} {cd} eql = trans (+-assoc m 1 cd) eql
 
 
   p1 : ∀ {N st₀}
@@ -352,14 +210,10 @@ module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
   ... | m≡N with sub1 {N} {m} {st₀} {stₘ} St-Fin st₀-initial m≡N (same₁ st₀↦ᵐstₘ (sym m≡N))
   ... | ()
 
--- p2 : 可能是無限或有限的State ，對每個initial state，reachable state是有限的
-
--- Pi/
-
   real-p1 : ∀ {N st₀}
     → State ⤖ Fin N
     → is-initial st₀
     → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
   real-p1 {N} {st₀} St-Fin st₀-initial = p1 {N} {st₀} St-Fin st₀-initial 0 N st₀ refl ◾
---  aa {N = N} {m = m} = p1 {N = N} {m = m} {cd = proj₁ (aa-helper m N {!!})} {proj₂ (aa-helper m N {!!})}
 
+-- p2 : 可能是無限或有限的State ，對每個initial state，reachable state是有限的
