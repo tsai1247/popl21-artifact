@@ -24,11 +24,11 @@ caseAnalysis (suc n) x f  | inj₂ ¬exists with f n ≟ x
 
 pigeonhole : ∀ N → (f : ℕ → ℕ)
            → (∀ n → n ≤ N → f n < N)
-           → ∃[ m ] ∃[ n ] (m < n × n ≤ N × f n ≡ f m)
+           → ∃[ m ] ∃[ n ] (m < n × n ≤ N × f m ≡ f n)
 pigeonhole 0 f prop with prop 0 z≤n
 ... | ()
 pigeonhole (suc N) f prop with caseAnalysis (suc N) (f (suc N)) f
-... | inj₁ (m , m≤n , fm≡fN+1) = m , suc N , m≤n , ≤-refl , sym fm≡fN+1
+... | inj₁ (m , m≤n , fm≡fN+1) = m , suc N , m≤n , ≤-refl , fm≡fN+1
 ... | inj₂ ¬exists = thm
   where
   g : ℕ → ℕ
@@ -48,15 +48,15 @@ pigeonhole (suc N) f prop with caseAnalysis (suc N) (f (suc N)) f
     ... | s≤s fN+1≤N = fN+1≤N
   ... | no  fx≢N = ≤∧≢⇒< (+-cancelˡ-≤ 1 (prop x (≤-trans x≤N (n≤1+n N)))) fx≢N
 
-  thm : ∃[ m ] ∃[ n ] (m < n × n ≤ suc N × f n ≡ f m)
+  thm : ∃[ m ] ∃[ n ] (m < n × n ≤ suc N × f m ≡ f n)
   thm with pigeonhole N g prop'
   ... | (m , n , m<n , n<N+1 , gn≡gm) = m , n , m<n , ≤-trans n<N+1 (n≤1+n N) , lem₁
     where
-    lem₁ : f n ≡ f m
+    lem₁ : f m ≡ f n
     lem₁ with (f m) ≟ N
     lem₁ | (yes fm≡N) with (f n) ≟ N
-    lem₁ | (yes fm≡N) | (yes fn≡N) = trans fn≡N (sym fm≡N)
-    lem₁ | (yes refl) | (no fn≠N) = ⊥-elim (¬exists (n , s≤s n<N+1 , gn≡gm))
+    lem₁ | (yes fm≡N) | (yes fn≡N) = trans fm≡N (sym fn≡N)
+    lem₁ | (yes refl) | (no fn≠N) = ⊥-elim (¬exists (n , s≤s n<N+1 , sym gn≡gm))
     lem₁ | (no  fm≠N) with (f n) ≟ N
-    lem₁ | (no  fm≠N) | (yes refl) = ⊥-elim (¬exists (m , ≤-trans m<n (≤-trans n<N+1 (n≤1+n N)) , sym gn≡gm))
+    lem₁ | (no  fm≠N) | (yes refl) = ⊥-elim (¬exists (m , ≤-trans m<n (≤-trans n<N+1 (n≤1+n N)) , gn≡gm))
     lem₁ | (no  fm≠N) | (no fn≠N) = gn≡gm
