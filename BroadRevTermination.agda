@@ -14,7 +14,7 @@ open import Relation.Nullary
 
 open import Pigeonhole
 
-module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
+module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
   open RevMachine.RevMachine M
   open import RevNoRepeat M
 

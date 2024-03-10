@@ -10,7 +10,7 @@ open import Relation.Nullary
 open import RevMachine
 open import Pigeonhole
 
-module RevNoRepeat1022 {ℓ} (M : RevMachine {ℓ}) where
+module NarrowRevTermination {ℓ} (M : RevMachine {ℓ}) where
   open RevMachine.RevMachine M
   open import RevNoRepeat M
 
