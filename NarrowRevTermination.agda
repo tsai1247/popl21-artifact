@@ -161,10 +161,3 @@ module NarrowRevTermination {ℓ} (M : RevMachine {ℓ}) where
     → is-initial st₀
     → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
   Finite-State-Termination {N} {st₀}  St-Fin st₀-initial = Finite-State-Termination-With-Countdown St-Fin st₀-initial N 0 st₀  (+-identityʳ N)  ◾
-
--- p2 : 可能是無限或有限的State ，對每個initial state，reachable state是有限的
-  Finite-Reachable-State-Termination : ∀ {N st₀}
-    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N)
-    → is-initial st₀
-    → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
-  Finite-Reachable-State-Termination {N} {st₀} St-Fin st₀-initial = {!!} 
