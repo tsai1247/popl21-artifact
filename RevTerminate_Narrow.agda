@@ -21,20 +21,20 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
 ----------------------
   -- 把 State ⤖ Fin N 中的 to 跟 from 拉出來用
   
-  to : ∀ {N st₀} → (∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N ) → ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) → Fin N
+  to : ∀ {N st₀} → (∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N ) → ∃[ stₘ ] (st₀ ↦* stₘ) → Fin N
   to record { to = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; bijective = bijective } ∃stₘ[] = _⟨$⟩_ ∃stₘ[]
 
-  from : ∀ {N st₀} → (∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N ) → Fin N → ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ)
+  from : ∀ {N st₀} → (∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N ) → Fin N → ∃[ stₘ ] (st₀ ↦* stₘ)
   from record { to = to ; bijective = record { injective = injective ; surjective = record { from = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; right-inverse-of = right-inverse-of } } } fn = _⟨$⟩_ fn
 
   to-from : ∀ {N st₀}
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
-    → (∃stₘ[] : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ))
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N )
+    → (∃stₘ[] : ∃[ stₘ ] (st₀ ↦* stₘ))
     → from St-Fin (to St-Fin ∃stₘ[]) ≡ ∃stₘ[]
   to-from record { to = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; bijective = record { injective = injective ; surjective = record { from = from ; right-inverse-of = right-inverse-of } } } ∃stₘ[] = injective (right-inverse-of (_⟨$⟩_ ∃stₘ[]))
 
   from-to : ∀ {N st₀}
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N )
     → (fn : Fin N)
     → to St-Fin (from St-Fin fn) ≡ fn
   from-to record { to = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; bijective = record { injective = injective ; surjective = record { from = from ; right-inverse-of = right-inverse-of } } } st = right-inverse-of st
@@ -68,31 +68,34 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
       → (m ≤ N → st₁ ↦[ m ] stₘ)
       → (suc m ≤ suc N → st₀ ↦[ suc m ] stₘ)
     Step→Trace-helper st₀↦st₁ m≤N→st₁↦stₘ (s≤s m≤N) = st₀↦st₁ ∷ m≤N→st₁↦stₘ m≤N
+    
+    [n]→* : ∀ {n st₀ stₙ}
+      → st₀ ↦[ n ] stₙ
+      → st₀ ↦* stₙ
+    [n]→* {0} {st₀} {.st₀} ◾ = ◾
+    [n]→* {suc n} {st₀} {stₙ} (st₀↦st₁ ∷ st₁↦ⁿstₙ) = st₀↦st₁ ∷ [n]→* st₁↦ⁿstₙ
+
 
   Step→Trace : ∀ {N st₀}
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
-    → (m : ℕ) → ∃[ stₘ ] (m ≤ N → st₀ ↦[ m ] stₘ)
-  Step→Trace {0} {st₀} (stₙ , st₀↦ᴺstₙ) 0 = stₙ , λ _ → st₀↦ᴺstₙ
-  Step→Trace {0} {st₀} (stₙ , st₀↦ᴺstₙ) (suc m) = stₙ , λ ()
-  Step→Trace {suc N} {st₀} (stₙ , st₀↦ᴺstₙ) zero = st₀ , λ _ → ◾
+    → (m : ℕ) → ∃[ stₘ ] (st₀ ↦* stₘ)
+  Step→Trace {0} {st₀} (stₙ , st₀↦ᴺstₙ) m = stₙ , [n]→* st₀↦ᴺstₙ -- λ _ → st₀↦ᴺstₙ
+  Step→Trace {suc N} {st₀} (stₙ , st₀↦ᴺstₙ) zero = st₀ , ◾
   Step→Trace {suc N} {st₀} (stₙ , (st₀↦st₁ ∷ st₁↦ᴺstₙ)) (suc m) with Step→Trace (stₙ , st₁↦ᴺstₙ) m
-  ... | stₘ , snd = stₘ , Step→Trace-helper st₀↦st₁ snd 
+  ... | stₘ , snd = stₘ , st₀↦st₁ ∷ snd
 
   Step→Fin : ∀ {N st₀}
-    → (∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N )
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
     → (m : ℕ) → Fin N
   -- not sure
-  Step→Fin {zero} {st₀} St-Fin (stₙ , st₀↦ⁿstₙ) m = to St-Fin (st₀ , 0  , ◾)
-
+  Step→Fin {zero} {st₀} St-Fin (stₙ , st₀↦ⁿstₙ) m = to St-Fin (st₀ , ◾)
   Step→Fin {suc N} {st₀} St-Fin (stₙ , st₀↦ⁿstₙ) m with Step→Trace (stₙ , st₀↦ⁿstₙ) m 
-  ... | stₘ , m≤N→st₀↦stₘ with m ≤? suc N
-  ... | .true because ofʸ p = to St-Fin (stₘ , m , m≤N→st₀↦stₘ p)
-  ... | .false because ofⁿ ¬p = Fin.zero {N} -- Fin.zero
+  ... | stₘ , m≤N→st₀↦stₘ = to St-Fin (stₘ , m≤N→st₀↦stₘ)
 
 
   Step→ℕ : ∀ {N st₀}
-    → (∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N )
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
     → (m : ℕ) → ℕ
 
@@ -107,11 +110,12 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
     FinN<N (Fin.suc fn) = s≤s (FinN<N fn)
   
   sub1-1 : ∀ {N st₀ stₙ}
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N)
     → (st₀↦ᴺstₙ : st₀ ↦[ N ] stₙ)
     → (∀ n → (n≤N : n ≤ N) → (Step→ℕ St-Fin (stₙ , st₀↦ᴺstₙ) n) < N)
   sub1-1 {N} {st₀} {stₙ} St-Fin st₀↦ᴺstₙ n n≤N with (Step→Fin St-Fin (stₙ , st₀↦ᴺstₙ) n )
   ... | FinN  = FinN<N FinN
+  
 
   private
     <→≤ : ∀ {m n}
@@ -145,26 +149,18 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
     toℕ→Fin {_} {Fin.zero} {Fin.zero} eql | from-to-fn≡fn | from-to-fm≡fm = refl
     toℕ→Fin {suc n} {Fin.suc fm} {Fin.suc fn} eql | from-to-fn≡fn | from-to-fm≡fm = cong Fin.suc (toℕ→Fin {n} {fm} {fn} (ss eql) )
 
-    to-eql : ∀ {stₘ stₙ st₀ N}
-      → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
-      → to St-Fin (stₘ , {!!} , {!!}) ≡ to St-Fin (stₙ , {!!} , {!!})
-      → ((stₘ , {!!} , {!!})) ≡ ((stₙ , {!!} , {!!}))
-    to-eql = {!!} -- {stₘ} {stₙ} {_} St-Fin eql with to-from St-Fin stₘ
---    ... | a≡stₘ with to-from St-Fin stₙ
---    ... | b≡stₙ with cong (from St-Fin) eql
---    ... | a≡b = trans (trans (sym a≡stₘ) a≡b) b≡stₙ
+  private      
+    *→[n] : ∀ {st₀ stₙ}
+      → st₀ ↦* stₙ
+      → ∃[ n ] (st₀ ↦[ n ] stₙ)
+    *→[n] = {!!}
+--    *→[n] {0} {st₀} {.st₀} ◾ = ◾
+--    *→[n] {suc n} {st₀} {stₙ} (st₀↦st₁ ∷ st₁↦ⁿstₙ) = st₀↦st₁ ∷ *→[n] st₁↦ⁿstₙ
 
-
-  from-reverse : ∀ st₀ stₘ stₙ N
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
-    → toℕ (to St-Fin stₘ) ≡ toℕ (to St-Fin stₙ)
-    → stₘ ≡ stₙ
-  from-reverse st₀ stₘ stₙ N St-Fin eql with toℕ→Fin eql
-  ... | to-stₘ≡to-stₙ = {!!} --  to-eql St-Fin to-stₘ≡to-stₙ
 
 
   stₙ→⊥ : ∀ {N st₀ stₙ}
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N )
     → is-initial st₀
     → st₀ ↦[ N ] stₙ → ⊥
 
@@ -172,9 +168,9 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
   ... | line2 with pigeonhole (N) (Step→ℕ St-Fin (stₙ , st₀↦ⁿ↦stₙ)) line2
   ... | m₁ , n₁ , m₁<n₁ , n₁≤N , tofn₁≡tofm₁ with ≤-trans (<→≤ m₁<n₁) n₁≤N
   ... | m₁≤N with Step→Trace {N} {st₀} (stₙ , st₀↦ⁿ↦stₙ ) m₁
-  ... | stₘ₁ , trₘ  with Step→Trace {N} {st₀} (stₙ , st₀↦ⁿ↦stₙ) n₁
-  ... | stₙ₁ , trₙ with NoRepeat {st₀} {stₘ₁} {stₙ₁} {m₁} {n₁} st₀-initial m₁<n₁ (trₘ m₁≤N) (trₙ n₁≤N)
-  ... | a = {!a (sym (from-reverse st₀ ? ? N St-Fin ?)) !}
+  ... | stₘ₁ , trₘ with Step→Trace {N} {st₀} (stₙ , st₀↦ⁿ↦stₙ) n₁
+  ... | stₙ₁ , trₙ with NoRepeat {st₀} {stₘ₁} {stₙ₁} {m₁} {n₁} st₀-initial m₁<n₁ {!tmp2!} {!!} -- (trₘ m₁≤N) (trₙ n₁≤N)
+  ... | a = {!tmp2!} --{!a (sym (from-reverse st₀ ? ? N St-Fin ?)) !}
   -- a (sym (from-reverse st₀ stₙ₁ stₘ₁ N St-Fin  tofn₁≡tofm₁ ) ) 
 
   private
@@ -183,12 +179,6 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
       → m ≡ n
     add-zero-eql {m} {n} m+0≡n = trans (sym (+-comm m 0)) m+0≡n 
 
-    [n]→* : ∀ {n st₀ stₙ}
-      → st₀ ↦[ n ] stₙ
-      → st₀ ↦* stₙ
-    [n]→* {0} {st₀} {.st₀} ◾ = ◾
-    [n]→* {suc n} {st₀} {stₙ} (st₀↦st₁ ∷ st₁↦ⁿstₙ) = st₀↦st₁ ∷ [n]→* st₁↦ⁿstₙ
-
     cd-1 : ∀ {m} {cd} {N}
       → (m) + (suc cd) ≡ N
       → (m + 1) + (cd) ≡ N
@@ -196,7 +186,7 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
 
 
   p2 : ∀ {N st₀}
-    → (St-Fin : ∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N)
     → is-initial st₀
     → ∀ m cd stₘ → m + cd ≡ N → st₀ ↦[ m ] stₘ
     → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
@@ -207,13 +197,14 @@ module RevTerminate {ℓ} (M : RevMachine {ℓ}) where
   ... | .false because ofⁿ ¬p = stₘ , [n]→* st₀↦ᵐstₘ , ¬p
 
   p2 {N} {st₀} St-Fin st₀-initial m 0 stₘ m+0≡N st₀↦ᵐstₘ with add-zero-eql m+0≡N
-  ... | m≡N with stₙ→⊥ {N} {st₀} {stₘ} St-Fin st₀-initial (same-trace st₀↦ᵐstₘ (sym m≡N))
+  ... | m≡N with stₙ→⊥ {N} {st₀} {stₘ}  St-Fin st₀-initial (same-trace st₀↦ᵐstₘ (sym m≡N))
   ... | ()
   
+ 
 -- p2 : 可能是無限或有限的State ，對每個initial state，reachable state是有限的
 
   real-p2 : ∀ {N st₀}
-    → (∃[ stₘ ] ∃[ m ] (st₀ ↦[ m ] stₘ) ⤖ Fin N )
+    → (St-Fin : ∃[ stₘ ] (st₀ ↦* stₘ) ⤖ Fin N)
     → is-initial st₀
     → ∃[ stₙ ] (st₀ ↦* stₙ × is-stuck stₙ)
   real-p2 {N} {st₀} St-Fin st₀-initial = p2 {N} {st₀} St-Fin st₀-initial 0 N st₀ refl ◾
