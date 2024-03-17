@@ -5,7 +5,7 @@ open import Data.Product
 open import Data.Empty
 open import Data.Bool using ( Bool ; true ; false )
 open import Data.Nat
-open import Data.Nat.Properties using ( +-suc ; +-comm ; +-assoc ; <-trans ; ≤-trans ; +-identityʳ ; <⇒≤)
+open import Data.Nat.Properties using ( +-suc ; +-comm ; +-assoc ; <-trans ; ≤-trans ; +-identityʳ ; <⇒≤ ; +-cancelˡ-≡)
 open import RevMachine
 
 open import Function.Bijection using ( _⤖_ ; Bijection )
@@ -52,6 +52,11 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
       → st₀ ↦[ m ] stₙ
     same-trace {st₀} {m} {.m} {stₙ} st₀↦stₙ refl = st₀↦stₙ
 
+    FinN<N : ∀ {N : ℕ} (fn : Fin N)
+      → (toℕ fn) < N
+    FinN<N Fin.zero = s≤s z≤n
+    FinN<N (Fin.suc fn) = s≤s (FinN<N fn)
+
     ≤-+ : ∀ {m} {N}
       → m ≤ N
       → ∃[ rest ] (m + rest ≡ N)
@@ -72,11 +77,6 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
   s1-2 N st₀ (stₙ , st₀↦stₙ) m m≤N with ≤-+ m≤N
   ... | rest , refl with split↦ⁿ {st₀} {stₙ} {m} {rest}  st₀↦stₙ
   ... | stₘ , st₀↦stₘ , stₘ↦stₙ = stₘ , st₀↦stₘ
-
-  s1-3 : ∀ N st₀
-    → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
-    → ∀ m → ∃[ stₘ ] (m ≤  N → st₀ ↦[ m ] stₘ)
-  s1-3 N st₀ (stₙ , st₀↦stₙ) m = {!!}
 
   s2-helper : ∀ N st₀
     → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N
@@ -103,19 +103,49 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
     → (St-Fin : ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
     → (∃stₙ : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
     → ∀ (m : ℕ) → m ≤ N → s3 N st₀ St-Fin ∃stₙ m < N
-  s3<N N st₀ St-Fin ∃stₙ m m≤N = {!!}
+  s3<N N st₀ St-Fin ∃stₙ m m≤N with  m ≤? N
+  ... | .true because ofʸ p = FinN<N (s2-helper N st₀ St-Fin ∃stₙ m p)
+  ... | .false because ofⁿ ¬p with ¬p m≤N
+  ... | ()
 
-  s4 : ∀ N st₀
-    → (St-Fin : ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
-    → (∃stₙ : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
-    → ∀ m n → m ≤ N → n ≤ N → s3 N st₀ St-Fin ∃stₙ m  ≡ s3 N st₀ St-Fin ∃stₙ n
-    → m ≡ n
-  s4 N st₀ St-Fin ∃stₙ m n m≤N n≤N eql with m ≤? N
-  ... | .false because ofⁿ ¬p = {!!}
-  ... | .true because ofʸ p with n ≤? N
-  ... | .false because ofⁿ ¬p = {!!}
-  ... | .true because ofʸ p₁ = {!!}
- 
+  private
+    to-fromℕ : ∀ N (fn : Fin N)
+      → fromℕ< {toℕ fn} (FinN<N fn) ≡ fn
+    to-fromℕ (suc N) Fin.zero = refl
+    to-fromℕ (suc N) (Fin.suc fn) = cong Fin.suc (to-fromℕ N fn)
+    
+    toℕ→Fin : ∀ {N} {fm fn : Fin N}
+      → toℕ fm ≡ toℕ fn
+      → fm ≡ fn
+    toℕ→Fin {suc N} {Fin.zero} {Fin.zero} refl = refl
+    toℕ→Fin {suc N} {Fin.suc fm} {Fin.suc fn} eql with to-fromℕ N fn
+    ... | from-to-fn≡fn with to-fromℕ N fm
+    ... | from-to-fm≡fm  = cong Fin.suc (toℕ→Fin (+-cancelˡ-≡ 1 eql))
+
+
+    to-eql : ∀ {st₀ N}
+      → (St-Fin : ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
+      → ∀ {∃m} {∃n}
+      → to St-Fin ∃m  ≡ to St-Fin ∃n
+      → ∃m ≡ ∃n
+    to-eql St-Fin {∃m} {∃n} eql with to-from St-Fin ∃m
+    ... | a≡∃m with to-from St-Fin ∃n
+    ... | b≡∃n with cong (from St-Fin) eql
+    ... | a≡b = trans (trans (sym a≡∃m) a≡b) b≡∃n
+
+    proj₁-eql : ∀ {st₀ stₘ stₙ} {m : ℕ} {n : ℕ} {pₘ : st₀ ↦[ m ] stₘ} {pₙ : st₀ ↦[ n ] stₙ}
+      → (m , stₘ , pₘ) ≡ (n , stₙ , pₙ)
+      → m ≡ n
+    proj₁-eql refl = refl
+
+    <-irreflexive : ∀(n : ℕ) → ¬ (n < n)
+    <-irreflexive zero ()
+    <-irreflexive (suc n) (s≤s n<n) = <-irreflexive n n<n
+    
+    trichotomy₁ : ∀ {m n : ℕ}
+      → m < n → m ≢ n 
+    trichotomy₁ {suc m} .{suc m} (s≤s m<n) refl = <-irreflexive m m<n
+
   pigeonhole-helper : ∀ {N st₀}
     → (St-Fin :  ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
     → (st₀↦ⁿstₙ : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
@@ -131,9 +161,14 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
   ... | m , n , m<n , n≤N , tofm≡tofn with ≤-trans (<⇒≤  m<n) n≤N
   ... | m≤N with s1-2 N st₀ (stₙ , st₀↦stₙ) m m≤N
   ... | stₘ , st₀↦stₘ with s1-2 N st₀ (stₙ , st₀↦stₙ) n n≤N -- Step→Trace (st₀↦ᴺ↦stₙ) n
-  ... | stₙ₁ , st₀↦stₙ₁  with NoRepeat st₀-initial m<n st₀↦stₘ  st₀↦stₙ₁
-  ... | stₘ≢stₙ with s4 N st₀ St-Fin (stₙ , st₀↦stₙ) m n m≤N n≤N tofm≡tofn -- from-reverse stₘ stₙ N St-Fin  tofm≡tofn
-  ... | stₘ≡stₙ = {!!} -- stₘ≢stₙ stₘ≡stₙ
+  ... | stₙ₁ , st₀↦stₙ₁ with m ≤? N
+  ... | .false because ofⁿ np = np m≤N
+  ... | .true because ofʸ p with n ≤? N
+  ... | .false because ofⁿ np = np n≤N
+  ... | .true because ofʸ p₁ with toℕ→Fin tofm≡tofn
+  ... | fm≡fn with to-eql St-Fin fm≡fn
+  ... | ∃m≡∃n with  proj₁-eql ∃m≡∃n
+  ... | m≡n = trichotomy₁ m<n m≡n
 
   private
     [n]→* : ∀ {n st₀ stₙ}
