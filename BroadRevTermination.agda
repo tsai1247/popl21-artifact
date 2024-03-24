@@ -5,7 +5,7 @@ open import Data.Product
 open import Data.Empty
 open import Data.Bool using ( Bool ; true ; false )
 open import Data.Nat
-open import Data.Nat.Properties using ( +-suc ; +-comm ; +-assoc ; <-trans ; ≤-trans ; +-identityʳ ; <⇒≤ ; +-cancelˡ-≡)
+open import Data.Nat.Properties using ( +-suc ; +-comm ; +-assoc ; <-trans ; ≤-trans ; +-identityʳ ; <⇒≤ ; +-cancelˡ-≡ ; <-irrefl)
 open import RevMachine
 
 open import Function.Bijection using ( _⤖_ ; Bijection )
@@ -19,7 +19,9 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
   open import RevNoRepeat M
 
 ----------------------
-  -- 把 State ⤖ Fin N 中的 to 跟 from 拉出來用
+  -- ⤖ : Bijection
+  -- 以下定義 to, from, to-from, from-to，簡化官方Bijection的對應方式
+  -- 例如 to St-Fin ∃st 代表 ∃st 經由 St-Fin 這個Bijection對應到的 Fin 值
   to : ∀ {N st₀} → (∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N ) → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) → Fin N
   to record { to = record { _⟨$⟩_ = _⟨$⟩_ ; cong = cong } ; bijective = bijective } ∃stₘ[] = _⟨$⟩_ ∃stₘ[]
 
@@ -65,46 +67,35 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
     ≤-+ {suc m} {suc N} (s≤s m≤N) with ≤-+ m≤N
     ... | rest , refl = rest , refl
 
-  s1-1 : ∀ N st₀
+  Step→Trace : ∀ N st₀
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
-    → ∀ m rest → m + rest ≡ N → ∃[ stₘ ] (st₀ ↦[ m ] stₘ)
-  s1-1 N st₀ (stₙ , st₀↦stₙ) m rest refl with split↦ⁿ {st₀} {stₙ} {m} {rest}  st₀↦stₙ
-  ... | stₘ , st₀↦stₘ , stₘ↦stₙ = stₘ , st₀↦stₘ
-
-  s1-2 : ∀ N st₀
-    → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
-    → ∀ m → m ≤  N → ∃[ stₘ ] (st₀ ↦[ m ] stₘ)
-  s1-2 N st₀ (stₙ , st₀↦stₙ) m m≤N with ≤-+ m≤N
+    → ∀ m → m ≤ N → ∃[ stₘ ] (st₀ ↦[ m ] stₘ)
+  Step→Trace N st₀ (stₙ , st₀↦stₙ) m m≤N with ≤-+ m≤N
   ... | rest , refl with split↦ⁿ {st₀} {stₙ} {m} {rest}  st₀↦stₙ
   ... | stₘ , st₀↦stₘ , stₘ↦stₙ = stₘ , st₀↦stₘ
 
-  s2-helper : ∀ N st₀
+  Step→Fin : ∀ N st₀
     → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
     → ∀ m → m ≤  N → Fin N
-  s2-helper N st₀ St-Fin ∃st₀↦stₙ m m≤N with s1-2 N st₀ ∃st₀↦stₙ m m≤N
+  Step→Fin N st₀ St-Fin ∃st₀↦stₙ m m≤N with Step→Trace N st₀ ∃st₀↦stₙ m m≤N
   ... | ∃st₀↦stₘ = to St-Fin (m ,  ∃st₀↦stₘ)
   
-  s2 : ∀ N st₀
-    → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N
-    → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
-    → ∀ m → m ≤  N → ℕ
-  s2 N st₀ St-Fin ∃st₀↦stₙ m m≤N = toℕ (s2-helper N st₀ St-Fin ∃st₀↦stₙ m m≤N)
-
-  s3 : ∀ N st₀
+  Step→ℕ : ∀ N st₀
     → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ)
     → ∀ (m : ℕ) → ℕ
-  s3 N st₀ St-Fin ∃stₙ m with m ≤? N
-  ... | .true because ofʸ p = s2 N st₀ St-Fin ∃stₙ m p
+  Step→ℕ N st₀ St-Fin ∃stₙ m with m ≤? N
   ... | .false because ofⁿ ¬p = 0
+  ... | .true because ofʸ m≤N with Step→Trace N st₀ ∃stₙ m m≤N
+  ... | ∃st₀↦stₘ = toℕ (to St-Fin (m , ∃st₀↦stₘ))
 
-  s3<N : ∀ N st₀
+  Step→ℕ<N : ∀ N st₀
     → (St-Fin : ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
     → (∃stₙ : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
-    → ∀ (m : ℕ) → m ≤ N → s3 N st₀ St-Fin ∃stₙ m < N
-  s3<N N st₀ St-Fin ∃stₙ m m≤N with  m ≤? N
-  ... | .true because ofʸ p = FinN<N (s2-helper N st₀ St-Fin ∃stₙ m p)
+    → ∀ (m : ℕ) → m ≤ N → Step→ℕ N st₀ St-Fin ∃stₙ m < N
+  Step→ℕ<N N st₀ St-Fin ∃stₙ m m≤N with  m ≤? N
+  ... | .true because ofʸ p = FinN<N (Step→Fin N st₀ St-Fin ∃stₙ m p)
   ... | .false because ofⁿ ¬p with ¬p m≤N
   ... | ()
 
@@ -121,7 +112,6 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
     toℕ→Fin {suc N} {Fin.suc fm} {Fin.suc fn} eql with to-fromℕ N fn
     ... | from-to-fn≡fn with to-fromℕ N fm
     ... | from-to-fm≡fm  = cong Fin.suc (toℕ→Fin (+-cancelˡ-≡ 1 eql))
-
 
     to-eql : ∀ {st₀ N}
       → (St-Fin : ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
@@ -144,23 +134,23 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
     
     trichotomy₁ : ∀ {m n : ℕ}
       → m < n → m ≢ n 
-    trichotomy₁ {suc m} .{suc m} (s≤s m<n) refl = <-irreflexive m m<n
+    trichotomy₁ {m} .{m} (m<n) refl = <-irreflexive m  m<n
 
   pigeonhole-helper : ∀ {N st₀}
     → (St-Fin :  ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N)
     → (st₀↦ⁿstₙ : ∃[ stₙ ] (st₀ ↦[ N ] stₙ))
-    → (∀ n → (n≤N : n ≤ N) → (s3 N st₀ St-Fin (st₀↦ⁿstₙ) n ) < N)
-  pigeonhole-helper {N} {st₀} St-Fin st₀↦ⁿstₙ n n≤N = s3<N N st₀ St-Fin (st₀↦ⁿstₙ) n n≤N
+    → (∀ n → (n≤N : n ≤ N) → (Step→ℕ N st₀ St-Fin (st₀↦ⁿstₙ) n ) < N)
+  pigeonhole-helper {N} {st₀} St-Fin st₀↦ⁿstₙ n n≤N = Step→ℕ<N N st₀ St-Fin (st₀↦ⁿstₙ) n n≤N
 
   Finite-State-Termination-At-N : ∀ {N st₀}
     → ∃[ m ] ∃[ stₘ ] (st₀ ↦[ m ] stₘ) ⤖ Fin N
     → is-initial st₀
     → ∃[ stₙ ] (st₀ ↦[ N ] stₙ) → ⊥
   Finite-State-Termination-At-N {N} {st₀} St-Fin st₀-initial (stₙ , st₀↦stₙ)
-    with pigeonhole N (s3 N st₀ St-Fin (stₙ , st₀↦stₙ)) (pigeonhole-helper {N} {st₀} St-Fin (stₙ , st₀↦stₙ) ) 
+    with pigeonhole N (Step→ℕ N st₀ St-Fin (stₙ , st₀↦stₙ)) (pigeonhole-helper {N} {st₀} St-Fin (stₙ , st₀↦stₙ) ) 
   ... | m , n , m<n , n≤N , tofm≡tofn with ≤-trans (<⇒≤  m<n) n≤N
-  ... | m≤N with s1-2 N st₀ (stₙ , st₀↦stₙ) m m≤N
-  ... | stₘ , st₀↦stₘ with s1-2 N st₀ (stₙ , st₀↦stₙ) n n≤N -- Step→Trace (st₀↦ᴺ↦stₙ) n
+  ... | m≤N with Step→Trace N st₀ (stₙ , st₀↦stₙ) m m≤N
+  ... | stₘ , st₀↦stₘ with Step→Trace N st₀ (stₙ , st₀↦stₙ) n n≤N -- Step→Trace (st₀↦ᴺ↦stₙ) n
   ... | stₙ₁ , st₀↦stₙ₁ with m ≤? N
   ... | .false because ofⁿ np = np m≤N
   ... | .true because ofʸ p with n ≤? N
@@ -196,7 +186,7 @@ module BroadRevTermination {ℓ} (M : RevMachine {ℓ}) where
   ... | sum-eql with st₀↦ᵐstₘ ++↦ⁿ (stₘ↦stₘ₊₁ ∷ ◾)
   ... | st₀↦stₘ₊₁ = Finite-Reachable-State-Termination-CountDown  {N} {st₀} St-Fin st₀-initial cd (m + 1) stₘ₊₁ sum-eql st₀↦stₘ₊₁ 
 
-  Finite-Reachable-State-Termination-CountDown {N} {st₀} St-Fin st₀-initial 0 m stₘ refl st₀↦ᵐstₘ with Finite-State-Termination-At-N {N} {st₀} St-Fin st₀-initial  (stₘ  , st₀↦ᵐstₘ) 
+  Finite-Reachable-State-Termination-CountDown {N} {st₀} St-Fin st₀-initial 0 m stₘ refl st₀↦ᵐstₘ with Finite-State-Termination-At-N {N} {st₀} St-Fin st₀-initial  (stₘ  , st₀↦ᵐstₘ)
   ... | ()
   
   Finite-Reachable-State-Termination : ∀ {N st₀}
